@@ -7,3 +7,4 @@ tmp/
 shots/
 lh/
 .DS_Store
+.lighthouseci/

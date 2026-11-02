@@ -1,4 +1,4 @@
-name: Build and verify
+name: CI
 
 on:
   push:
@@ -15,24 +15,49 @@ concurrency:
 
 jobs:
   build:
-    name: Build and verify site
+    name: Build, verify, validate, links
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 20
-      - run: npm ci
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=moderate
       - run: npm run build
+      - name: Fail if generated config drifted
+        run: git diff --exit-code vercel.json netlify.toml
       - run: npm run verify
+      - run: npm run validate
+      - run: npm run links
       - name: Check required SEO / AI files
         run: |
-          for f in index.html 404.html sitemap.xml robots.txt llms.txt llms-full.txt; do test -s "dist/$f" || { echo "missing dist/$f"; exit 1; }; done
+          for f in index.html 404.html sitemap.xml sitemap_index.xml robots.txt llms.txt llms-full.txt ai.txt humans.txt feed.xml manifest.webmanifest _headers .well-known/security.txt; do test -s "dist/$f" || { echo "missing dist/$f"; exit 1; }; done
           grep -q "Sitemap: https://codingagent.in/sitemap.xml" dist/robots.txt
-          ! grep -rq "brocode.example" dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: site-dist
           path: dist
+          include-hidden-files: true
           retention-days: 7
+
+  lighthouse:
+    name: Lighthouse CI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npx --yes @lhci/cli@0.15.1 autorun

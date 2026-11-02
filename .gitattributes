@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.woff2 binary
+*.png binary
+*.zip binary
+package-lock.json linguist-generated=true -diff
+vercel.json linguist-generated=true

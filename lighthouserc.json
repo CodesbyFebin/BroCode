@@ -1,0 +1,25 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "PORT=8787 node scripts/serve.mjs",
+      "startServerReadyPattern": "http://localhost",
+      "url": [
+        "http://localhost:8787/",
+        "http://localhost:8787/guides/",
+        "http://localhost:8787/faq/",
+        "http://localhost:8787/roadmap/",
+        "http://localhost:8787/guides/agent-safety-and-verification/prompt-injection-and-untrusted-content/"
+      ],
+      "numberOfRuns": 3
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", {"minScore": 0.95}],
+        "categories:accessibility": ["error", {"minScore": 1}],
+        "categories:best-practices": ["error", {"minScore": 1}],
+        "categories:seo": ["error", {"minScore": 1}]
+      }
+    },
+    "upload": {"target": "filesystem", "outputDir": ".lighthouseci"}
+  }
+}
