@@ -1,0 +1,19 @@
+# BroCODE
+
+> Source repository for https://codingagent.in, the website and field guide for BroCODE, an AI-assisted coding workspace for editable source, reviewable changes and local projects (V3). AI proposals are reviewable diffs; local edits are preserved; local checkpoints allow restoring earlier versions; files export as ZIP or JSON; the mobile static preview is script-disabled HTML inspection; source is sent for AI help only with explicit consent. The Android release is in preparation; pricing has not been announced.
+
+## Site
+
+- [Home](https://codingagent.in/): product overview and the get-started steps
+- [Guides index](https://codingagent.in/guides/): 11 learning paths on AI-assisted coding
+- [llms.txt for the site](https://codingagent.in/llms.txt): an index of every guide and article
+- [llms-full.txt](https://codingagent.in/llms-full.txt): full plain text of all guides
+- [Sitemap](https://codingagent.in/sitemap.xml)
+
+## Repository
+
+- [README](README.md): structure, build, deploy, content model, SEO/AEO/GEO features
+- [DESIGN.md](DESIGN.md): visual design system
+- [content/](content/): guide content, one module per pillar (p01 to p11)
+- [build.mjs](build.mjs): dependency-free static generator (`npm run build` writes dist/)
+- [CONTRIBUTING.md](CONTRIBUTING.md): content rules (no invented features, prices, stats or testimonials)

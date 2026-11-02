@@ -1,0 +1,14 @@
+name: Content fix or new guide
+description: Report an inaccuracy or propose a guide or article
+labels: [content]
+body:
+  - type: input
+    id: url
+    attributes: {label: Page URL, placeholder: "https://codingagent.in/guides/..."}
+  - type: textarea
+    id: what
+    attributes: {label: What should change, description: Quote the current text and suggest a correction.}
+    validations: {required: true}
+  - type: textarea
+    id: source
+    attributes: {label: Source or evidence, description: Content must be accurate; no invented features, prices or stats.}

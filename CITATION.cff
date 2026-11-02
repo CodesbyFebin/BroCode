@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you reference this site or its guides, please cite it as below."
+title: "BroCODE: AI-assisted coding workspace site and field guide"
+type: software
+authors:
+  - name: "BroCODE"
+repository-code: "https://github.com/CodesbyFebin/BroCode"
+url: "https://codingagent.in"
+license: MIT
+version: "3.0.0"
+date-released: "2026-11-02"
+keywords: [ai-coding, ai-agents, developer-tools, static-site, seo, aeo, geo, llms-txt]
+abstract: "Source of the BroCODE website: a dependency-free static generator and an 11-path field guide on AI-assisted coding, reviewing AI changes, checkpoints, exports, privacy and agent safety."

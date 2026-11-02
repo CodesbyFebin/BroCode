@@ -1,0 +1,9 @@
+node_modules/
+dist/
+wordcounts.txt
+tmp/
+/tmp/
+*.zip
+shots/
+lh/
+.DS_Store
