@@ -1,80 +1,156 @@
-# BroCODE — AI-assisted coding workspace (site and field guide)
+# BroCODE v2: open-source full-stack AI coding and agentic workspace
 
-**Live site:** https://codingagent.in
+BroCODE v2 is a self-hostable workspace where AI agents plan, write, test, review and repair code, with evidence for every step (test log, model, tokens and cost). It runs NVIDIA Nemotron on Nebius Token Factory by default, and optional open-weight and local models when you select them.
 
-BroCODE is an AI-assisted coding workspace for editable source, reviewable changes and local projects (V3). AI proposals arrive as reviewable diffs, local edits are preserved, local checkpoints let you restore earlier versions, files export as ZIP or JSON, the mobile static preview inspects HTML with scripts disabled, and source is sent for AI help only with explicit consent. The Android release is in preparation; pricing has not been announced.
+This repository also holds the public website for [codingagent.in](https://codingagent.in), now under [`site/`](site/).
 
-This repository holds the source of the public website: a fast, dependency-free static site with an 11-path field guide about AI-assisted coding.
+> Status: v2 is new. Features below are implemented and covered by offline tests. Live model calls need your own API keys and have not been run against production keys in this repo's CI.
 
-## What's in the site
-
-- **Home**: product overview, three-stage workflow (prompt, review, checkpoint and export), the guide vault, get-started steps and FAQ.
-- **11 pillar guides** under `/guides/<pillar>/`, each with focused **cluster articles** under `/guides/<pillar>/<cluster>/`: getting started, prompting for code, editing source files, reviewing AI changes, checkpoints and recovery, static preview, exports and portability, privacy and safe AI use, Android workflows, publishing your project, and agent safety and verification.
-- **About, FAQ, editorial policy and privacy** pages, plus a `404`.
-
-## Repository structure
+## Repository layout
 
 ```
-build.mjs          static generator (Node ESM, no dependencies)
-config.mjs         SITE_URL, SITE_NAME, REPO_URL, UPDATED date
-style.css          design system, inlined into every page (see DESIGN.md)
-DESIGN.md          visual system spec ("Stranger Builds" brutalist / classified-file look)
-content/
-  p01.mjs … p11.mjs  one pillar each: summary, sections, steps, FAQs, clusters
-  extras.mjs         extra sections merged into pillars and clusters
-  index.mjs          loads and merges the pillars
-  pages.mjs          simple pages and the homepage FAQ
-  home.html          homepage body template
-  site.js, home.js   small inline scripts (motion toggle, reveals; homepage intro and embers)
-static/            favicon, og image, sample file, self-hosted fonts (OFL)
-scripts/verify.mjs post-build checks
-.github/           CI workflow, issue and PR templates
+app/          Full-stack workspace (TanStack Start + React 19 + Vite, Nitro server, PGlite/Postgres)
+  src/lib/agent/      Nemotron routing, providers, write→run→test→repair loop, sandbox, Tavily
+  src/lib/v2/         NEW in v2: automations, cron, orchestrator, MCP client, repo agent, memory, checkpoints
+  src/lib/…           pipeline (migration auditor), redteam, meridian, whisperer, pcm (project DNA),
+                      workflow, board, collab (builder→reviewer handoff), skills
+  src/routes/api/     /api/dna, /api/hooks/:id (webhook trigger), /api/automations/tick (cron tick)
+  tests/              node:test suites (npm run test:agent)
+agents-py/    Python agent service (FastAPI + pydantic-ai): /review, /plan, /evals/review
+site/         Dependency-free static site generator for codingagent.in (unchanged content)
+.github/      CI (site, app, agents-py), RedAgent and CI Whisperer workflows
 ```
 
-`dist/` is generated and gitignored.
+## Architecture
 
-## Build
+```mermaid
+flowchart LR
+  U[Developer / trigger] -->|prompt| UI[Workbench UI]
+  CRON[Cron tick<br/>/api/automations/tick] --> AUT[Automations]
+  HOOK[Signed webhook<br/>/api/hooks/:id] --> AUT
+  AUT --> WF[Workflow engine]
+  UI --> ORCH[Orchestrator<br/>planner · coder · tester · reviewer]
+  UI --> WF
+  ORCH --> LLM[(Nemotron on Nebius Token Factory<br/>Ultra · Super · Nano)]
+  WF --> LLM
+  ORCH --> SB[Sandbox<br/>Vercel Sandbox / Docker / local]
+  ORCH --> MEM[(Project memory)]
+  ORCH --> CP[(Checkpoints / undo)]
+  ORCH --> MCP[MCP servers<br/>stdio tools]
+  ORCH --> REPO[Repo agent<br/>git clone · branch · commit · gh PR]
+  LLM -. optional .-> OW[(Open-weight / local / Meta Llama)]
+  UI --> PY[agents-py<br/>pydantic-ai]
+```
 
-Requires Node.js 20+. There are no npm dependencies.
+## Features
+
+Inherited from the Coding-Agent platform:
+
+- **Nemotron routing on Nebius Token Factory**: Ultra plans and repairs, Super implements, Nano handles fast calls. Per-step model and USD cost in the UI.
+- **Write → run → test → repair loop** in Vercel Sandbox, Docker (`--network=none`) or a local process (dev). Secrets are scrubbed from the sandbox environment.
+- **Tavily research** with citations (optional).
+- **Ship pipeline** with a migration auditor (blocks risky migrations scoring 4 or below), PGlite shadow runs, seed and smoke tests; deploy only after a human types DEPLOY.
+- **RedAgent** red-team harness (`REDAGENT_MODE`), **MERIDIAN** 8-agent chain (security, compliance, CI/CD, GreenOps estimates, contracts), **CI Whisperer** GitHub Action, **Project DNA** endpoint (`/api/dna`, token-protected).
+- **Workflow builder** (DAG with LLM, tool, check and condition nodes), **task board**, Ensemble-style **builder → reviewer handoff**, bundled **skills**.
+- **Optional providers**: Meta Llama API (with a hard spend cap), local llama.cpp, Ollama, OpenRouter free tier, Hugging Face Inference, and the Nebius open-weight catalog. All opt-in.
+
+New in v2 (`app/src/lib/v2/`):
+
+| Capability | What ships | Status |
+|---|---|---|
+| Automations | Cron (5-field, UTC) and HMAC-signed webhook triggers that run workflows; run history; manual run | Real, tested. Scheduler state is in memory; definitions load from `BROCODE_AUTOMATIONS` |
+| Multi-agent orchestrator | Planner (Ultra) → coder (Super) → tester (sandbox) → reviewer (Ultra), looping on test failures or review changes, round-capped, path-safe file parsing | Real, tested with injected models. Not yet wired into the workbench UI |
+| MCP client | stdio JSON-RPC client: `initialize`, `tools/list`, `tools/call`, per-call tool allowlist, timeouts | Real, tested against a fixture server. HTTP/SSE transport not implemented |
+| Repo-aware agent | `git clone` (https/file only), branch, apply files (path-safe), diff, commit; `gh pr create` | Real, tested on a local repo. Push and PR run only when `GH_TOKEN` and `BROCODE_ALLOW_PR=1` are set; otherwise a dry run returns the command |
+| Project memory | Per-project JSONL store, keyword recall, prompt context block | Real, tested. Keyword scoring, not embeddings |
+| Checkpoints and undo | Snapshot a file map, list, diff, restore, undo; capped history per project | Real, tested. Not yet wired into the workbench UI |
+
+## Quickstart
+
+Requirements: Node.js 22, and [uv](https://docs.astral.sh/uv/) for the Python service.
 
 ```bash
-npm ci
-npm run build    # writes dist/
-npm run verify   # internal links, canonicals, JSON-LD, sitemap
-npm run serve    # http://localhost:8787 (needs python3)
+git clone https://github.com/CodesbyFebin/BroCode && cd BroCode
+
+# App
+cd app && cp .env.example .env    # add NEBIUS_API_KEY
+npm install
+npm run dev                        # http://localhost:8080
+npm run test:agent                 # offline tests, no keys needed
+
+# Python agents (optional)
+cd ../agents-py && uv run pytest -q
+
+# Site
+cd ../site && npm ci && npm run build && npm run verify
 ```
 
-## Deploy
+### Automations example
 
-`dist/` is a plain static folder. Any static host works (GitHub Pages, Netlify, Vercel, Cloudflare Pages, S3 and so on): build command `npm run build`, output directory `dist`. Point `codingagent.in` at the host. CI also uploads `dist` as the `site-dist` artifact on every run. No deployment is configured in this repo.
+`automations.json` (point `BROCODE_AUTOMATIONS` at it):
 
-## Content model
+```json
+[
+  { "id": "nightly-review", "name": "Nightly review", "enabled": true,
+    "trigger": { "kind": "cron", "cron": "0 2 * * *" }, "workflowId": "example", "input": "review main" },
+  { "id": "on-push", "name": "On push", "enabled": true,
+    "trigger": { "kind": "webhook", "secretEnv": "HOOK_SECRET" }, "workflowId": "example", "input": "check push" }
+]
+```
 
-Each pillar module exports `{ n, slug, title, h1, desc, card, summary, sections[], steps?, faqs[], clusters[] }`. A cluster has the same shape minus `clusters`. A `section` is `{ h, p[], list? }`. Inline `` `code` `` in text is rendered as `<code>`. Edit content, run the build, and every page, the sitemap and the llms files update together.
+Call `POST /api/automations/tick` every minute with `Authorization: Bearer $BROCODE_CRON_TOKEN`. Send webhooks to `POST /api/hooks/on-push` with header `X-BroCODE-Signature: sha256=<HMAC-SHA256 of the raw body>`; a JSON body `{"input": "..."}` overrides the input.
 
-Content rules: describe only what the product actually does. No invented features, prices, statistics, testimonials or compliance claims.
+## Environment variables
 
-## SEO, AEO and GEO features
+All keys are read server-side; none are hardcoded. Full list with comments: [`app/.env.example`](app/.env.example).
 
-- Canonical URLs on `https://codingagent.in`, unique titles and descriptions, Open Graph and Twitter cards.
-- One JSON-LD `@graph` per page: Organization, WebSite, SoftwareApplication, TechArticle, BreadcrumbList, FAQPage, HowTo and ItemList where relevant.
-- **Answer-first pages (AEO):** every guide opens with a short, quotable answer, followed by question-shaped headings and an FAQ.
-- **Generative engine optimisation (GEO):** `llms.txt` (an index of all guides) and `llms-full.txt` (full plain text) for AI assistants, plus a robots.txt that explicitly allows the major AI and search crawlers and links the sitemap.
-- `sitemap.xml` with lastmod, breadcrumbs, internal pillar and cluster linking, and prev/next navigation.
-- Performance: inline CSS, preloaded woff2 subsets with `font-display: swap` and fallback metrics, no framework, no third-party requests. Motion respects `prefers-reduced-motion` and has a visible toggle.
+| Variable | Purpose |
+|---|---|
+| `NEBIUS_API_KEY` | Required for live model calls (Nemotron on Nebius Token Factory) |
+| `NEBIUS_BASE_URL`, `NEBIUS_MODEL_{NANO,SUPER,ULTRA}` | Optional overrides |
+| `TAVILY_API_KEY` | Optional web research |
+| `SANDBOX_RUNNER` | `vercel`, `docker` or `local` |
+| `BROCODE_AUTOMATIONS`, `BROCODE_CRON_TOKEN` | Automations file and cron tick token |
+| `BROCODE_MEMORY_DIR`, `BROCODE_CHECKPOINT_DIR` | Storage for memory and checkpoints |
+| `GH_TOKEN`, `BROCODE_ALLOW_PR` | Repo agent PRs (off unless both set) |
+| `META_LLAMA_API_KEY`, `META_SPEND_CAP_USD`, `LOCAL_LLAMA_BASE_URL`, `OLLAMA_BASE_URL`, `OPENROUTER_API_KEY`, `HF_TOKEN` | Optional providers |
+| `PCM_DNA_TOKEN`, `REDAGENT_MODE`, `PY_AGENT_URL` | Project DNA, red-team, Python service |
 
-## Lighthouse (measured locally)
+## Providers and models
 
-Lighthouse 12, run on a local static server against the home page, one pillar and one cluster, in mobile and desktop presets: **100 / 100 / 100 / 100** (Performance, Accessibility, Best Practices, SEO) on all six runs. These are local results from November 2026; production numbers depend on the host (compression and caching headers).
+| Provider | Models | Default |
+|---|---|---|
+| Nebius Token Factory | `nvidia/Nemotron-3-Ultra-550b-a55b`, `nvidia/nemotron-3-super-120b-a12b`, `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` | Yes |
+| Nebius open-weight catalog | Llama, Qwen, DeepSeek, gpt-oss and others | Opt-in |
+| Meta Llama API | `muse-spark-1.3-contributor`, `muse-wonder-1.0` | Opt-in, spend-capped |
+| Local | llama.cpp, Ollama | Opt-in |
+| Free hosted tiers | OpenRouter `:free`, Hugging Face Inference | Opt-in, off without a key |
 
-## Contributing
+Each model is used under its own licence. Any Llama-licensed model shows **"Built with Llama"** in the trace and status bar.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
+## Tests
+
+- `app`: `npm run test:agent`, 75 tests (66 inherited, 9 new v2 tests).
+- `agents-py`: `uv run pytest -q`, 7 tests.
+- `site`: `npm run build` and `npm run verify` (internal links, canonicals, JSON-LD, sitemap).
+
+## Website
+
+The codingagent.in site lives in [`site/`](site/). See [`site/DESIGN.md`](site/DESIGN.md). Build from `site/`: `npm ci && npm run build && npm run verify`, output in `site/dist`. No deployment is configured in this repo.
 
 ## License
 
-- **Code** (generator, scripts, styles): [MIT](LICENSE).
-- **Written content** in `content/`: the licence is the owner's choice and is not granted by the MIT licence unless the owner states otherwise.
-- **Fonts** in `static/fonts/`: Anybody and Roboto Mono, SIL Open Font License 1.1 (`OFL-*.txt`).
+- Site code and new BroCODE v2 code: MIT ([LICENSE](LICENSE)).
+- `app/` and `agents-py/` were imported from [Coding-Agent](https://github.com/CodesbyFebin/Coding-Agent) and keep Apache-2.0 ([app/LICENSE](app/LICENSE)) unless the copyright holder relicenses them.
+- Site written content: the owner's choice, not granted by MIT. Fonts: SIL OFL 1.1.
 
-If you cite this project, see [CITATION.cff](CITATION.cff).
+See [NOTICE](NOTICE) for third-party attributions.
+
+## Credits
+
+- [Coding-Agent](https://github.com/CodesbyFebin/Coding-Agent): the platform base.
+- [andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) (MIT), [pydantic-ai](https://github.com/pydantic/pydantic-ai) (MIT), [Ensemble](https://github.com/MeloMei/ensemble) (MIT), [Taku UI](https://github.com/taku-ui) (MIT, via its CLI).
+- Ideas only, no code copied: [Dify](https://github.com/langgenius/dify) and [Multica](https://github.com/multica-ai/multica).
+- NVIDIA Nemotron on Nebius Token Factory; Tavily for research.
+
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md). Security: [SECURITY.md](SECURITY.md).

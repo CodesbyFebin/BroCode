@@ -1,0 +1,33 @@
+name: RedAgent gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  redteam:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Unit tests (pipeline + RedAgent)
+        run: npm run test:agent
+      - name: Red-team the coding agent with Nemotron (fails on critical/high)
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: npm run redteam:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: redagent-report
+          path: app/redagent-report.md
+          if-no-files-found: ignore

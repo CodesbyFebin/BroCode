@@ -5,7 +5,7 @@ Thanks for helping improve the BroCODE site and field guide.
 ## Setup
 
 ```bash
-npm ci
+cd site && npm ci
 npm run build && npm run verify
 npm run serve   # http://localhost:8787
 ```
@@ -19,10 +19,11 @@ npm run serve   # http://localhost:8787
 
 ## Design and performance
 
-Follow [DESIGN.md](DESIGN.md). Keep pages framework-free, keep the inline JS small, respect `prefers-reduced-motion`, and keep AA contrast. Pull requests should keep Lighthouse at 100 in all four categories on mobile and desktop.
+Follow [DESIGN.md](site/DESIGN.md). Keep pages framework-free, keep the inline JS small, respect `prefers-reduced-motion`, and keep AA contrast. Pull requests should keep Lighthouse at 100 in all four categories on mobile and desktop.
 
 ## Pull requests
 
 1. Branch from `main`.
-2. Make the change and run `npm run build && npm run verify`.
-3. Open a PR using the template. CI must pass.
+2. Make the change and run (from `site/`) `npm run build && npm run verify`.
+3. For app changes, run `npm run test:agent` from `app/`; for Python, `uv run pytest -q` from `agents-py/`.
+4. Open a PR using the template. CI must pass.
