@@ -1,16 +1,17 @@
 {
-  "name": "brocode-site",
-  "version": "3.0.0",
+  "name": "brocode",
+  "version": "2.0.0",
   "private": true,
-  "description": "Static, dependency-free generator for the BroCODE site and field guide (https://codingagent.in).",
-  "type": "module",
+  "description": "BroCODE v2: open-source full-stack AI coding and agentic workspace, plus the codingagent.in site.",
   "license": "MIT",
   "homepage": "https://codingagent.in",
   "repository": {"type": "git", "url": "git+https://github.com/CodesbyFebin/BroCode.git"},
-  "engines": {"node": ">=20"},
   "scripts": {
-    "build": "node build.mjs",
-    "verify": "node scripts/verify.mjs",
-    "serve": "python3 -m http.server 8787 --directory dist"
+    "site:build": "npm --prefix site run build",
+    "site:verify": "npm --prefix site run verify",
+    "app:dev": "npm --prefix app run dev",
+    "app:test": "npm --prefix app run test:agent",
+    "py:test": "cd agents-py && uv run pytest -q",
+    "test": "npm run app:test && npm run site:build && npm run site:verify"
   }
 }

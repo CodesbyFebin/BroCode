@@ -1,4 +1,4 @@
-name: Build and verify
+name: CI
 
 on:
   push:
@@ -14,10 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build and verify site
+  site:
+    name: Site build and verify (/site)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: site
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,5 +37,35 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: site-dist
-          path: dist
+          path: site/dist
           retention-days: 7
+
+  app:
+    name: App typecheck, agent tests, build (/app)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # npm ci rejects the inherited lockfile (pre-existing ajv mismatch), so install matches local validation.
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run test:agent
+      - run: npm run build
+
+  agents-py:
+    name: Python agents (/agents-py)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: agents-py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run pytest -q

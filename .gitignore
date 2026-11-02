@@ -7,3 +7,12 @@ tmp/
 shots/
 lh/
 .DS_Store
+.vercel/
+.output/
+.venv/
+__pycache__/
+.pytest_cache/
+.brocode-memory/
+.brocode-checkpoints/
+*.db
+app/.env

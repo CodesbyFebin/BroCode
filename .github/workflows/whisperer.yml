@@ -1,0 +1,125 @@
+name: CI Whisperer
+
+# PR review + CI-failure explanation as PR comments, config audit + release notes on merge.
+# Comments are posted ONLY when this runs in CodesbyFebin/Coding-Agent and the PR comes
+# from the same repo (forks, mirrors and copies of this workflow only write the job summary).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whisperer-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.workflow_run.id || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff "$BASE_SHA...$HEAD_SHA" > /tmp/pr.diff
+      - name: Review (Nano triage + Super analysis when NEBIUS_API_KEY is set)
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+          OUT: /tmp/review.md
+        run: npm run -s whisperer -- review /tmp/pr.diff
+      - name: Post PR comment (owner repo only)
+        if: github.repository == 'CodesbyFebin/Coding-Agent' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file /tmp/review.md
+
+  explain-failure:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      # Checks out the default branch (trusted code), never the PR head.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Fetch failed logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/ci.log || true
+      - name: Explain (Super when NEBIUS_API_KEY is set)
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+          OUT: /tmp/explain.md
+        run: npm run -s whisperer -- explain /tmp/ci.log
+      - name: Post PR comment (owner repo only)
+        if: github.repository == 'CodesbyFebin/Coding-Agent' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.pull_requests[0].number
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file /tmp/explain.md
+
+  on-merge:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Config & security audit (summary only)
+        run: npm run -s whisperer -- audit
+      - name: Release notes since previous push
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            OUT=/tmp/release-notes.md npm run -s whisperer -- release "$BEFORE" "$GITHUB_SHA"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-notes
+          path: /tmp/release-notes.md
+          if-no-files-found: ignore
