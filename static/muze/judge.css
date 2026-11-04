@@ -1,0 +1,25 @@
+.muze { --muze-accent: #79e6e5; --muze-surface: #10171d; --muze-line: #435364; color: #eef4fa; padding: 2rem 0 4rem; }
+.muze-hero, .muze-panel { padding: clamp(1rem, 4vw, 2.5rem); border: 1px solid var(--muze-line); margin-block: 1rem; border-radius: 1rem; background: var(--muze-surface); }
+.muze-hero { background: radial-gradient(ellipse at top right, #24434d, transparent 75%), var(--muze-surface); }
+.muze h1 { max-width: 18ch; margin: .3em 0; font-size: clamp(2.3rem, 7vw, 5rem); line-height: 1.04; }
+.muze h2 { margin-block: .4em; }
+.muze p { max-width: 65ch; }
+.muze-kicker { color: var(--muze-accent); font: .8rem/1.5 monospace; letter-spacing: .12em; }
+.muze-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; margin-block: 1rem; }
+.muze-actions a, .muze button { font: inherit; font-weight: 600; color: #f5faff; background: #192830; border: 1px solid var(--muze-line); border-radius: .45rem; padding: .5rem .9rem; cursor: pointer; }
+.muze :is(a, button, input, textarea, summary):focus-visible { outline: 2px solid var(--muze-accent); outline-offset: 3px; }
+.muze-actions a:hover, .muze button:hover { border-color: var(--muze-accent); }
+.muze label { display: block; margin-block: .5rem; }
+.muze input, .muze textarea { width: 100%; margin-top: .25rem; padding: .5rem; border: 1px solid var(--muze-line); border-radius: .4rem; color: inherit; background: #0a1118; font: inherit; }
+.muze .muze-inline input { width: auto; }
+.muze textarea { resize: vertical; }
+.muze progress { width: 100%; accent-color: var(--muze-accent); }
+.muze-grid, .muze-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: .8rem; }
+.muze-grid > * { padding: .8rem; border: 1px solid var(--muze-line); border-radius: .5rem; overflow-wrap: anywhere; }
+.muze-results { list-style: none; padding: 0; }
+#muze-clock { font: .75em monospace; color: var(--muze-accent); white-space: nowrap; }
+#muze-intro { border: 0; padding: 0; width: 100%; height: 100%; max-width: none; max-height: none; color: inherit; background: #070c13; }
+#muze-intro::backdrop { background: #070c13; }
+#muze-intro[open] { display: grid; place-items: center; }
+#muze-tunnel { position: absolute; width: 100%; height: 100%; inset: 0; pointer-events: none; }
+.muze-intro-copy { position: relative; width: min(90%, 34rem); background: #09131bea; border: 1px solid var(--muze-line); border-radius: 1rem; padding: clamp(1rem, 5vw, 3rem); }
