@@ -1,5 +1,6 @@
 import fs from 'node:fs'; import path from 'node:path';
 import { SITE_URL, SITE_NAME, REPO_URL, UPDATED } from './config.mjs';
+import { muzeBody } from './content/muze.mjs';
 import { pillars } from './content/index.mjs';
 const OUT='dist'; fs.rmSync(OUT,{recursive:true,force:true});
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -32,7 +33,7 @@ ${ld.length?`<script type="application/ld+json">${JSON.stringify({'@context':'ht
 <header class="hdr"><div class="wrap hrow"><a class="logo" href="/" aria-label="BroCODE home">${BOLT}Bro<b>CODE</b></a><nav class="hnav" aria-label="Primary"><a href="/guides/">Guides</a><a href="/faq/">FAQ</a><a href="/roadmap/">Roadmap</a><a href="/about/">About</a><button class="mt" id="mt" type="button" aria-pressed="true" aria-label="Motion"><i></i><i></i><i></i><span>Motion</span></button></nav></div></header>
 <main id="main" class="wrap">${body}</main>
 <footer class="ftr"><div class="wrap"><svg class="fword" viewBox="0 0 1180 140" role="img" aria-label="BroCODE"><text x="0" y="122" font-family="Anybody XX,Impact,sans-serif" font-weight="900" font-size="150" fill="#161a1e" stroke="#2a3036" stroke-width="3">Bro<tspan fill="#ffe62b" stroke="none">CODE</tspan></text></svg>
-<nav aria-label="Footer"><ul class="fins"><li><a href="/guides/">Learning paths</a></li><li><a href="/faq/">FAQ</a></li><li><a href="/roadmap/">Roadmap</a></li><li><a href="/about/">About</a></li><li><a href="/editorial-policy/">Editorial policy</a></li><li><a href="/privacy/">Privacy</a></li><li><a href="/llms.txt">Indexing</a></li><li><a href="/sitemap.xml">Site map</a></li><li><a href="${REPO_URL}" rel="noopener">GitHub ↗</a></li></ul></nav>
+<nav aria-label="Footer"><ul class="fins"><li><a href="/guides/">Learning paths</a></li><li><a href="/faq/">FAQ</a></li><li><a href="/roadmap/">Roadmap</a></li><li><a href="/about/">About</a></li><li><a href="/editorial-policy/">Editorial policy</a></li><li><a href="/privacy/">Privacy</a></li><li><a href="/muze/">MuZe judge demo</a></li><li><a href="/llms.txt">Indexing</a></li><li><a href="/sitemap.xml">Site map</a></li><li><a href="${REPO_URL}" rel="noopener">GitHub ↗</a></li></ul></nav>
 <p class="mono small">Your idea. Your source. Your call.</p><p class="mono small muted">© 2026 BroCODE · Source-grounded guides · Android release in preparation</p><p class="small muted">Documentation basis: supplied V3 source snapshot; repository HEAD and a production release are not verified.</p></div></footer>
 <script>${FOOTJS}</script>${url==='/'?`<script>${HOMEJS}</script>`:''}
 </body></html>`;}
@@ -103,6 +104,28 @@ llmsFull.push(`# BroCODE roadmap (planned, not shipped)\nURL: ${SITE_URL+url}\n\
 const ld=[ORG,{'@type':'WebSite','@id':SITE_URL+'/#site',name:SITE_NAME,url:SITE_URL+'/',publisher:{'@id':SITE_URL+'/#org'},inLanguage:'en'},
 {'@type':'SoftwareApplication','@id':SITE_URL+'/#app',name:'BroCODE',applicationCategory:'DeveloperApplication',operatingSystem:'Android (release in preparation)',softwareVersion:'V3',description:'BroCODE is an AI-assisted coding workspace for editable source, reviewable changes and local projects, with local checkpoints, ZIP and JSON exports, a script-disabled static preview and consent before source is sent for AI help.',publisher:{'@id':SITE_URL+'/#org'}},faqLd(homeFaq)];
 emit('/',layout({url:'/',title:'BroCODE — AI-Assisted Coding Workspace for Editable Source',desc:'BroCODE is an AI-assisted coding workspace: editable source files, reviewable AI diffs, local checkpoints, ZIP/JSON exports and consent before sending code. Android release in preparation.',body:home,ld}),{title:'Home',desc:'home'});}
+// MuZe judge walkthrough and sample atlas
+{
+  const url = '/muze/';
+  const title = 'MuZe V6 Judge Walkthrough | BroCODE';
+  const desc = 'Explore the MuZe protocol map and run the self-hosted draft, approval and evidence demo.';
+  emit(url, layout({url, title, desc, body: muzeBody}), {title, desc});
+  fs.cpSync('static/muze', OUT + '/muze', {recursive: true});
+
+  const catalogUrl = '/meta-500/';
+  const catalogTitle = 'MuZe Sample Repository Atlas | BroCODE';
+  const catalogDesc = 'Browse the supplied sample atlas and its 100-row shortlist.';
+  const catalogBody = `<link rel="stylesheet" href="/muze/judge.css">
+  <section class="muze" aria-labelledby="atlas-title"><p class="muze-kicker">MUZE V6 / SAMPLE CATALOG</p>
+  <h1 id="atlas-title">Repository atlas</h1>
+  <p>Supplied prototype data includes synthetic entries. Treat names and metadata as unverified sample content.</p>
+  <p><a href="/muze/">Back to judge walkthrough</a></p>
+  <label>Search sample entries<input id="muze-search" type="search"></label>
+  <label class="muze-inline"><input id="muze-shortlist" type="checkbox"> Browse first 100 sample entries</label>
+  <p id="muze-count" role="status">Loading sample catalog…</p>
+  <ul id="muze-results" class="muze-grid muze-results"></ul></section><script src="/muze/catalog.js" defer></script>`;
+  emit(catalogUrl, layout({url: catalogUrl, title: catalogTitle, desc: catalogDesc, body: catalogBody}), {title: catalogTitle, desc: catalogDesc});
+}
 // 404
 fs.writeFileSync(path.join(OUT,'404.html'),layout({url:'/404.html',title:'Page not found | BroCODE',desc:'This page does not exist.',body:`<header class="filehead"><p class="stamp">File missing</p><h1>404 — nothing here.</h1></header><p>That page doesn't exist. Try the <a href="/guides/">guides</a>, the <a href="/faq/">FAQ</a> or the <a href="/">homepage</a>.</p>`}).replace('index,follow','noindex'));
 // assets
