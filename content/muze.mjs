@@ -55,7 +55,7 @@ export const muzeBody = `
     <p class="muze-kicker">SELF-HOSTED DEMO</p>
     <h2>From draft to evidence</h2>
     <ol>
-      <li>Start MuzeBOS locally and open the judge demo as the owner.</li>
+      <li>Follow the MuzeBOS setup, then run <code>PORT=3000 npm run dev</code> and open the judge demo as the owner.</li>
       <li>Insert the fixture lead and propose an editable template reply.</li>
       <li>Make a human decision on the exact payload, then inspect the audit trail.</li>
       <li>Export the evidence bundle and run the offline verifier.</li>
